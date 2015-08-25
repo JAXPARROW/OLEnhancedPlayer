@@ -1,13 +1,17 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      1.0
+// @version      1.1
 // @description  Replaces buggy and full-of-adds openload player for a clear html5 player.
-// @author       Juraj Nyiri
+// @author       Juraj Nyíri | jurajnyiri.eu
+// @encoding utf-8
+// @license http://opensource.org/licenses/MIT
+// @homepage https://github.com/JurajNyiri/OLEnhancedPlayer
 // @match        https://openload.co/*
 // @match        https://openload.tv/*
 // @grant        none
 // @require http://code.jquery.com/jquery-latest.js
+// @updateURL https://raw.githubusercontent.com/JurajNyiri/OLEnhancedPlayer/master/main.user.js
 // @downloadURL https://raw.githubusercontent.com/JurajNyiri/OLEnhancedPlayer/master/main.user.js
 // ==/UserScript==
 
