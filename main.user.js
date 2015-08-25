@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      1.3
+// @version      1.4
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -21,7 +21,7 @@ var timo;
 var videoInFS = false;
 $(function() {
 	$.get(window.location.href, function(data) {
-		var subtitleshtml = data.substring(data.indexOf("<track kind=\"captions\" src=\""),(data.lastIndexOf("</track>")+8));
+		var subtitleshtml = data.substring(data.indexOf("<track"),(data.lastIndexOf("</track>")+8));
 		var htmlcontent = "<video id=\"realVideoElem\" style=\"width: 100%; height:100%;\" controls poster=\""+$('video').attr('poster')+"\"><source src=\""+$("video source").attr('src')+"\" type=\"video/mp4\">";
 		htmlcontent += subtitleshtml;
 		htmlcontent += "</video>";
@@ -84,7 +84,6 @@ function videoClick()
 {
     clicks++;
     clearTimeout(timo);
-    console.log(clicks)
     if(clicks == 2)
     {
         clearTimeout(timo);
