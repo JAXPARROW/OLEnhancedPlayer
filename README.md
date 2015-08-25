@@ -6,7 +6,7 @@ Replaces OpenLoad player with a clean html5 player with basic functionality.
 - Pause/Play with spacebar or click anywhere.
 - Fullscreen support with doubleclick
 
-###What works:
+##What works:
 - Embeded video on external webpage - Flawlessly
 - Video on the main site - OK
 
