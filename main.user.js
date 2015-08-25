@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      1.4
+// @version      1.5
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -13,32 +13,58 @@
 // @require http://code.jquery.com/jquery-latest.js
 // @updateURL https://raw.githubusercontent.com/JurajNyiri/OLEnhancedPlayer/master/main.user.js
 // @downloadURL https://raw.githubusercontent.com/JurajNyiri/OLEnhancedPlayer/master/main.user.js
+// @run-at   document-start
 // ==/UserScript==
 
 var videoElem = false;
 var clicks = 0;
 var timo;
 var videoInFS = false;
-$(function() {
-	$.get(window.location.href, function(data) {
-		var subtitleshtml = data.substring(data.indexOf("<track"),(data.lastIndexOf("</track>")+8));
-		var htmlcontent = "<video id=\"realVideoElem\" style=\"width: 100%; height:100%;\" controls poster=\""+$('video').attr('poster')+"\"><source src=\""+$("video source").attr('src')+"\" type=\"video/mp4\">";
-		htmlcontent += subtitleshtml;
-		htmlcontent += "</video>";
-		$(".videocontainer").html(htmlcontent)
-		videoElem = $("#realVideoElem");
-		$(videoElem).bind( "click", function() 
-		{
-            videoClick()
-		});
-		videoElem[0].play();
+
+//remove all original scripts
+$('script').each(function( index ) 
+{
+    $(this).attr("src","");
+    $(this).html("");
+});
+
+
+$(function() 
+{
+    $.get(window.location.href, function(data) 
+    {
+        $.ajax({
+            url:$("video source").attr('src'),
+            complete: function(xhr) 
+            {
+                var realSrc = xhr.getResponseHeader("x-redirect");
+                var subtitleshtml = data.substring(data.indexOf("<track"),(data.lastIndexOf("</track>")+8));
+                var htmlcontent = "<video id=\"realVideoElem\" style=\"width: 100%; height:100%;\" controls poster=\""+$('video').attr('poster')+"\"><source src=\""+realSrc+"\" type=\"video/mp4\">";
+                htmlcontent += subtitleshtml;
+                htmlcontent += "</video>";
+                $(".videocontainer").html(htmlcontent)
+                videoElem = $("#realVideoElem");
+                
+                $(videoElem).bind( "click", function() 
+                {
+                    videoClick()
+                });
+                videoElem[0].play();
+                
+            }
+        });
 	});
-})
+});
+
+$(document).on('mozfullscreenchange webkitfullscreenchange fullscreenchange',function()
+{
+    videoInFS = !videoInFS;
+});
+
 
 function videoFS(elem)
 {
-    videoInFS = !videoInFS;
-    if(videoInFS)
+    if(!videoInFS)
     {
         if (elem.requestFullscreen) 
         {
@@ -123,3 +149,4 @@ $(window).keypress(function(e)
         e.preventDefault();
 	}
 });
+
