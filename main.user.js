@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      1.5
+// @version      1.6
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -20,6 +20,7 @@ var videoElem = false;
 var clicks = 0;
 var timo;
 var videoInFS = false;
+var inIframe = false;
 
 //remove all original scripts
 $('script').each(function( index ) 
@@ -33,28 +34,47 @@ $(function()
 {
     $.get(window.location.href, function(data) 
     {
-        $.ajax({
-            url:$("video source").attr('src'),
-            complete: function(xhr) 
-            {
-                var realSrc = xhr.getResponseHeader("x-redirect");
-                var subtitleshtml = data.substring(data.indexOf("<track"),(data.lastIndexOf("</track>")+8));
-                var htmlcontent = "<video id=\"realVideoElem\" style=\"width: 100%; height:100%;\" controls poster=\""+$('video').attr('poster')+"\"><source src=\""+realSrc+"\" type=\"video/mp4\">";
-                htmlcontent += subtitleshtml;
-                htmlcontent += "</video>";
-                $(".videocontainer").html(htmlcontent)
-                videoElem = $("#realVideoElem");
-                
-                $(videoElem).bind( "click", function() 
+        if($("video source").attr('src').indexOf("/stream/") > -1)
+        {
+            inIframe = true;
+            $.ajax({
+                url:$("video source").attr('src'),
+                complete: function(xhr) 
                 {
-                    videoClick()
-                });
-                videoElem[0].play();
-                
-            }
-        });
+                    var realSrc = xhr.getResponseHeader("x-redirect");
+                    processVideo(data,realSrc);
+                }
+            });
+        }
+        else
+        {
+            inIframe = false;
+            processVideo(data,$("video source").attr('src'));
+        }
 	});
 });
+
+function processVideo(data,realSrc)
+{
+    var subtitleshtml = data.substring(data.indexOf("<track"),(data.lastIndexOf("</track>")+8));
+    var htmlcontent = "<video id=\"realVideoElem\" style=\"width: 100%; height:100%;\" controls poster=\""+$('video').attr('poster')+"\"><source src=\""+realSrc+"\" type=\"video/mp4\">";
+    htmlcontent += subtitleshtml;
+    htmlcontent += "</video>";
+    if(inIframe)
+    {
+        $(".videocontainer").html(htmlcontent)
+    }
+    else
+    {
+        $("html").html(htmlcontent)
+    }
+    videoElem = $("#realVideoElem");
+    $(videoElem).bind( "click", function() 
+    {
+        videoClick()
+    });
+    videoElem[0].play();
+}
 
 $(document).on('mozfullscreenchange webkitfullscreenchange fullscreenchange',function()
 {
