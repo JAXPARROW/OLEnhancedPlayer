@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      1.1
-// @description  Replaces buggy and full-of-adds openload player for a clear html5 player.
+// @version      1.11
+// @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
 // @license http://opensource.org/licenses/MIT
