@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      1.2
+// @version      1.3
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -16,6 +16,9 @@
 // ==/UserScript==
 
 var videoElem = false;
+var clicks = 0;
+var timo;
+var videoInFS = false;
 $(function() {
 	$.get(window.location.href, function(data) {
 		var subtitleshtml = data.substring(data.indexOf("<track kind=\"captions\" src=\""),(data.lastIndexOf("</track>")+8));
@@ -26,11 +29,77 @@ $(function() {
 		videoElem = $("#realVideoElem");
 		$(videoElem).bind( "click", function() 
 		{
-			pausePlayVideo(videoElem[0])
+            videoClick()
 		});
 		videoElem[0].play();
 	});
 })
+
+function videoFS(elem)
+{
+    videoInFS = !videoInFS;
+    if(videoInFS)
+    {
+        if (elem.requestFullscreen) 
+        {
+            elem.requestFullscreen();
+        } 
+        else if (elem.mozRequestFullScreen) 
+        {
+            elem.mozRequestFullScreen();
+        } 
+        else if (elem.webkitRequestFullscreen) 
+        {
+            elem.webkitRequestFullscreen();
+        }
+    }
+    else
+    {
+        try 
+        {
+            elem.exitFullscreen();
+        } 
+        catch(err)
+        {
+            try
+            {
+                elem.mozCancelFullscreen();
+            }
+            catch(err)
+            {
+                try
+                {
+                    elem.webkitExitFullscreen();
+                }
+                catch(err)
+                {
+                    
+                }
+            }
+        }
+    }
+}
+
+function videoClick()
+{
+    clicks++;
+    clearTimeout(timo);
+    console.log(clicks)
+    if(clicks == 2)
+    {
+        clearTimeout(timo);
+        clicks = 0;
+        videoFS(videoElem[0]);
+    }
+    else
+    {
+        timo = setTimeout(function () 
+        {
+            pausePlayVideo(videoElem[0]);
+            clicks = 0;
+        },250); 
+    }
+}
 
 function pausePlayVideo(video)
 {
@@ -52,5 +121,6 @@ $(window).keypress(function(e)
 		{
 			pausePlayVideo(videoElem[0]);
 		}
+        e.preventDefault();
 	}
 });
