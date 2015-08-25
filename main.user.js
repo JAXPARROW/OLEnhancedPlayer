@@ -8,7 +8,7 @@
 // @match        https://openload.tv/*
 // @grant        none
 // @require http://code.jquery.com/jquery-latest.js
-// @downloadURL https://github.com/JurajNyiri/OLEnhancedPlayer/blob/master/main.user.js
+// @downloadURL https://raw.githubusercontent.com/JurajNyiri/OLEnhancedPlayer/master/main.user.js
 // ==/UserScript==
 
 var videoElem = false;
