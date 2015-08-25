@@ -9,3 +9,7 @@ Replaces OpenLoad player with a clean html5 player with basic functionality.
 ##How to install:
 
 - [Install](https://raw.githubusercontent.com/JurajNyiri/OLEnhancedPlayer/master/main.user.js) from github.com
+
+###What works:
+- Embeded video on external webpage - Flawlessly
+- Video on the main site - OK
