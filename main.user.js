@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      1.6
+// @version      1.7
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -19,6 +19,7 @@
 var videoElem = false;
 var clicks = 0;
 var timo;
+var timu;
 var videoInFS = false;
 var inIframe = false;
 
@@ -29,6 +30,17 @@ $('script').each(function( index )
     $(this).html("");
 });
 
+$(document).on('mousemove', function() {
+    clearTimeout(timu);
+    document.body.style.cursor = 'default';
+    timu = setTimeout(function() 
+    {
+        if(videoElem && videoInFS)
+        {
+            document.body.style.cursor = 'none';
+        }
+    }, 3400);
+});
 
 $(function() 
 {
@@ -160,11 +172,18 @@ function pausePlayVideo(video)
 
 $(window).keypress(function(e) 
 {
+    console.log(e.which)
 	if(videoElem)
 	{
 		if (e.which == 32) 
 		{
 			pausePlayVideo(videoElem[0]);
+		}
+        if (e.which == 102) 
+		{
+			clearTimeout(timo);
+            clicks = 0;
+            videoFS(videoElem[0]);
 		}
         e.preventDefault();
 	}
