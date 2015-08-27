@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      1.7
+// @version      1.8
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -14,7 +14,17 @@
 // @updateURL https://raw.githubusercontent.com/JurajNyiri/OLEnhancedPlayer/master/main.user.js
 // @downloadURL https://raw.githubusercontent.com/JurajNyiri/OLEnhancedPlayer/master/main.user.js
 // @run-at   document-start
+// @grant    GM_setValue
+// @grant    GM_getValue
 // ==/UserScript==
+
+//Modify these
+var useTrakt = false; //Whether to use trakt.tv integration
+var traktClientID = "";
+var traktClientSecret = "";
+
+//Do not change anything under this.
+
 
 var videoElem = false;
 var clicks = 0;
@@ -42,7 +52,14 @@ $(document).on('mousemove', function() {
     }, 3400);
 });
 
-$(function() 
+function popupwindow(url, title, w, h) 
+{
+    var left = (screen.width/2)-(w/2);
+    var top = (screen.height/2)-(h/2);
+    return window.open(url, title, 'toolbar=no, location=no, directories=no, status=no, menubar=no, scrollbars=no, resizable=no, copyhistory=no, width='+w+', height='+h+', top='+top+', left='+left);
+} 
+
+function modifyPlayer()
 {
     $.get(window.location.href, function(data) 
     {
@@ -63,7 +80,139 @@ $(function()
             inIframe = false;
             processVideo(data,$("video source").attr('src'));
         }
-	});
+    });
+}
+
+function firstAuthentication(traktPIN)
+{
+    var postData = 
+    {
+        "code": traktPIN,
+        "client_id": traktClientID,
+        "redirect_uri": "urn:ietf:wg:oauth:2.0:oob",
+        "grant_type": "authorization_code"
+    }
+    var postData = 
+    {
+        'code': traktPIN,
+        'redirect_uri': "urn:ietf:wg:oauth:2.0:oob",
+        'grant_type': 'authorization_code',
+        'client_id': traktClientID,
+        'client_secret': traktClientSecret,
+        'response_type': "code"
+    }
+
+
+    $.ajax({
+        url: 'https://api-v2launch.trakt.tv/oauth/token',
+        type: "POST",
+        data: JSON.stringify(postData),
+        dataType: "json",
+        contentType: "application/json; charset=utf-8",
+        complete: function(xhr)
+        {
+            if(xhr.status == 200)
+            {
+                var data = JSON.parse(xhr.responseText);
+                
+                GM_setValue("traktAccessToken",data.access_token)
+                GM_setValue("traktAccessTokenCreated",data.created_at)
+                GM_setValue("traktRefreshToken",data.refresh_token)
+                getNewAccessToken(data.refresh_token)
+            }
+            else
+            {
+                alert("Incorrect PIN code entered!");
+                StartFirstTimeTraktAuth()
+            }
+        }
+    });
+}
+
+function StartFirstTimeTraktAuth()
+{
+    var traktAuth = popupwindow("https://trakt.tv/pin/6025",'Trakt authentication',500,600);
+    if (window.focus) 
+    {
+        traktAuth.focus();
+        var timer = setInterval(function() 
+        {   
+            if(traktAuth.closed) 
+            {                             
+                clearInterval(timer);  
+                var traktPIN = prompt("Please enter trakt.tv PIN code:", "");
+                if ((traktPIN != null) && (traktPIN != ""))
+                {
+                    firstAuthentication(traktPIN)
+                }
+                else 
+                {
+                    alert("Track login process cancelled.\nSet useTrakt variable in source code to false to cancel permanently.");
+                    modifyPlayer()
+                }
+            }
+        }, 250); 
+    }
+}
+
+function getNewAccessToken(refresh_token)
+{
+    var postData = 
+    {
+        'refresh_token': refresh_token,
+        'redirect_uri': "urn:ietf:wg:oauth:2.0:oob",
+        'client_id': traktClientID,
+        'client_secret': traktClientSecret,
+        "grant_type": "refresh_token"
+    }
+
+    $.ajax({
+        url: 'https://api-v2launch.trakt.tv/oauth/token',
+        type: "POST",
+        data: JSON.stringify(postData),
+        dataType: "json",
+        contentType: "application/json; charset=utf-8",
+        complete: function(xhr)
+        {
+            if(xhr.status == 200)
+            {
+                var data = JSON.parse(xhr.responseText);
+                
+                GM_setValue("traktAccessToken",data.access_token)
+                GM_setValue("traktAccessTokenCreated",data.created_at)
+                GM_setValue("traktRefreshToken",data.refresh_token)
+                
+                traktTokenRefreshed()
+            }
+            else
+            {
+                StartFirstTimeTraktAuth()
+            }
+        }
+    });
+}
+
+function traktTokenRefreshed()
+{
+    
+}
+
+$(function() 
+{
+    //trakt pincode detection
+    if((typeof GM_getValue("traktAccessToken") === "undefined")&&useTrakt)
+    {
+        StartFirstTimeTraktAuth()
+    }
+    else
+    {
+        if(Math.floor(Date.now() / 1000) - GM_getValue("traktAccessTokenCreated") > 5184000)
+        {
+            getNewAccessToken(GM_getValue("traktRefreshToken"))
+        }
+        
+        modifyPlayer()
+    }
 });
 
 function processVideo(data,realSrc)
@@ -172,7 +321,6 @@ function pausePlayVideo(video)
 
 $(window).keypress(function(e) 
 {
-    console.log(e.which)
 	if(videoElem)
 	{
 		if (e.which == 32) 
