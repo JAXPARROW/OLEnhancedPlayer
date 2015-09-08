@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      1.8
+// @version      1.9
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -24,6 +24,7 @@ var traktClientID = "";
 var traktClientSecret = "";
 var playedPercentToSendToTrakt = 0.9;
 var playedSecondsToSendToTrakt = 180;
+var onlyEnhance = true;
 //Do not change anything under this.
 
 
@@ -36,6 +37,8 @@ var inIframe = false;
 var parentSite = ""
 var vidDuration = false;
 var playedSeconds = 0;
+
+var tracks = [];
 
 
 //remove all original scripts
@@ -321,22 +324,42 @@ $(function()
 
 function processVideo(data,realSrc)
 {
+    var tracks = $('track', data);
+    
     var subtitleshtml = data.substring(data.indexOf("<track"),(data.lastIndexOf("</track>")+8));
     var htmlcontent = "<video id=\"realVideoElem\" style=\"width: 100%; height:100%;\" controls poster=\""+$('video').attr('poster')+"\"><source src=\""+realSrc+"\" type=\"video/mp4\">";
     htmlcontent += subtitleshtml;
     htmlcontent += "</video>";
-    if(inIframe)
+    if(onlyEnhance)
     {
-        $(".videocontainer").html(htmlcontent)
+        videoElem = $("#olvideo_html5_api");
+        $(".vjs-control-bar").remove();
+        $(".vjs-big-play-button").remove();
+        $(".vjs-text-track-display").remove();
+        $(".vjs-loading-spinner").remove();
+        $(".vjs-poster").remove();
+        $(".vjs-error-display").remove();
+        $(".vjs-control-bar").remove();
+        videoElem[0].setAttribute("controls","controls")   
     }
     else
     {
-        $("html").html(htmlcontent)
-    }
-    videoElem = $("#realVideoElem");
+        if(inIframe)
+        {
+            $(".videocontainer").html(htmlcontent)
+        }
+        else
+        {
+            $("html").html(htmlcontent)
+        }
+        videoElem = $("#realVideoElem");
+    } 
     $(videoElem).bind( "click", function() 
     {
-        videoClick()
+        if(!onlyEnhance)
+        {
+            videoClick();
+        }
     });
     videoElem[0].play();
     var checkDurationTimer = setInterval(function(){
@@ -344,6 +367,45 @@ function processVideo(data,realSrc)
         {
             vidDuration = videoElem[0].duration;
             clearInterval(checkDurationTimer);
+            
+            if(onlyEnhance)
+            {
+                if(tracks.length == 0)
+                {
+                    //var subtitles = prompt("No subtitles found.\nDo you want to add them? (Accepted: srt/vtt)", "");
+                    if ((subtitles != null) && (subtitles!= ""))
+                    {
+                        var track = [];
+                        track[0] = document.createElement("track"); 
+                        track[0].kind = "subtitles"; 
+                        track[0].label = "English"; 
+                        track[0].srclang = "en"; 
+                        track[0].src = subtitles; 
+                        track[0].addEventListener("load", function() { 
+                            this.mode = "showing"; 
+                            videoElem[0].textTracks[0].mode = "showing";
+                        });
+                        videoElem[0].appendChild(track[0]);
+                    }
+                }
+                else
+                {
+                    var track = [];
+                    $.each(tracks, function( i, l )
+                           {
+                               track[i] = document.createElement("track"); 
+                               track[i].kind = $(l).attr("kind"); 
+                               track[i].label = $(l).attr("label"); 
+                               track[i].srclang = $(l).attr("srclang"); 
+                               track[i].src = $(l).attr("src"); 
+                               track[i].addEventListener("load", function() { 
+                                   this.mode = "showing"; 
+                                   videoElem[0].textTracks[i].mode = "showing";
+                               });
+                               videoElem[0].appendChild(track[i]);
+                           })
+                }
+            }
         }
     },500);
     var checkNearEndOfVideo = setInterval(function(){
