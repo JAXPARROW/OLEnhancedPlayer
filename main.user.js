@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      1.9
+// @version      2.0
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -71,22 +71,29 @@ function modifyPlayer()
 {
     $.get(window.location.href, function(data) 
     {
-        if($("video source").attr('src').indexOf("/stream/") > -1)
+        try
         {
-            inIframe = true;
-            $.ajax({
-                url:$("video source").attr('src'),
-                complete: function(xhr) 
-                {
-                    var realSrc = xhr.getResponseHeader("x-redirect");
-                    processVideo(data,realSrc);
-                }
-            });
+            if($("video source").attr('src').indexOf("/stream/") > -1)
+            {
+                inIframe = true;
+                $.ajax({
+                    url:$("video source").attr('src'),
+                    complete: function(xhr) 
+                    {
+                        var realSrc = xhr.getResponseHeader("x-redirect");
+                        processVideo(data,realSrc);
+                    }
+                });
+            }
+            else
+            {
+                inIframe = false;
+                processVideo(data,$("video source").attr('src'));
+            }
         }
-        else
+        catch(err)
         {
-            inIframe = false;
-            processVideo(data,$("video source").attr('src'));
+            processVideo(data,false);
         }
     });
 }
@@ -327,9 +334,17 @@ function processVideo(data,realSrc)
     var tracks = $('track', data);
     
     var subtitleshtml = data.substring(data.indexOf("<track"),(data.lastIndexOf("</track>")+8));
-    var htmlcontent = "<video id=\"realVideoElem\" style=\"width: 100%; height:100%;\" controls poster=\""+$('video').attr('poster')+"\"><source src=\""+realSrc+"\" type=\"video/mp4\">";
-    htmlcontent += subtitleshtml;
-    htmlcontent += "</video>";
+	if(realSrc !== false)
+	{
+		var htmlcontent = "<video id=\"realVideoElem\" style=\"width: 100%; height:100%;\" controls poster=\""+$('video').attr('poster')+"\"><source src=\""+realSrc+"\" type=\"video/mp4\">";
+		htmlcontent += subtitleshtml;
+		htmlcontent += "</video>";
+	}
+	else
+	{
+		onlyEnhance = true;
+	}
+    
     if(onlyEnhance)
     {
         videoElem = $("#olvideo_html5_api");
@@ -340,6 +355,16 @@ function processVideo(data,realSrc)
         $(".vjs-poster").remove();
         $(".vjs-error-display").remove();
         $(".vjs-control-bar").remove();
+        
+		
+		//other bulls*it
+		$("#videooverlay").css({"bottom":"-100%;","right":"100%","position":"fixed"});
+		$("#srtSelector").remove();
+		$(".vjs-caption-settings").remove();
+		$(".vjs-modal-overlay").remove();
+		$(".vjs-hidden").remove();
+		$("#anim-container").remove();
+		
         videoElem[0].setAttribute("controls","controls")   
     }
     else
@@ -361,6 +386,9 @@ function processVideo(data,realSrc)
             videoClick();
         }
     });
+	//update 06112015: need to press the fu*king videooverlay
+	$("#videooverlay").click();
+	
     videoElem[0].play();
     var checkDurationTimer = setInterval(function(){
         if (videoElem[0].readyState > 0) 
@@ -520,4 +548,3 @@ $(window).keypress(function(e)
         e.preventDefault();
 	}
 });
-
