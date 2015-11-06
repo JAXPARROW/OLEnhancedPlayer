@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      2.1
+// @version      2.2
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -72,6 +72,7 @@ function modifyPlayer()
 {
     $.get(window.location.href, function(data) 
     {
+		console.log(data);
         try
         {
             if($("video source").attr('src').indexOf("/stream/") > -1)
@@ -369,24 +370,24 @@ function processVideo(data,realSrc)
     if(onlyEnhance)
     {
         videoElem = $("#olvideo_html5_api");
-        $(".vjs-control-bar").remove();
-        $(".vjs-big-play-button").remove();
-        $(".vjs-text-track-display").remove();
-        $(".vjs-loading-spinner").remove();
-        $(".vjs-poster").remove();
-        $(".vjs-error-display").remove();
-        $(".vjs-control-bar").remove();
+       // $(".vjs-control-bar").remove();
+        //$(".vjs-big-play-button").remove();
+        //$(".vjs-text-track-display").remove();
+        //$(".vjs-loading-spinner").remove();
+        //$(".vjs-poster").remove();
+        //$(".vjs-error-display").remove();
+        //$(".vjs-control-bar").remove();
         
 		
 		//other bulls*it
 		$("#videooverlay").css({"bottom":"-100%;","right":"100%","position":"fixed"});
-		$("#srtSelector").remove();
-		$(".vjs-caption-settings").remove();
-		$(".vjs-modal-overlay").remove();
-		$(".vjs-hidden").remove();
-		$("#anim-container").remove();
+		//$("#srtSelector").remove();
+		//$(".vjs-caption-settings").remove();
+		//$(".vjs-modal-overlay").remove();
+		//$(".vjs-hidden").remove();
+		//$("#anim-container").remove();
 		
-        videoElem[0].setAttribute("controls","controls")   
+        //videoElem[0].setAttribute("controls","controls")   
     }
     else
     {
@@ -417,6 +418,7 @@ function processVideo(data,realSrc)
             vidDuration = videoElem[0].duration;
             clearInterval(checkDurationTimer);
             
+			/*
             if(onlyEnhance)
             {
                 if(tracks.length == 0)
@@ -455,6 +457,7 @@ function processVideo(data,realSrc)
                            })
                 }
             }
+			*/
         }
     },500);
     var checkNearEndOfVideo = setInterval(function(){
@@ -522,22 +525,25 @@ function videoFS(elem)
 
 function videoClick()
 {
-    clicks++;
-    clearTimeout(timo);
-    if(clicks == 2)
-    {
-        clearTimeout(timo);
-        clicks = 0;
-        videoFS(videoElem[0]);
-    }
-    else
-    {
-        timo = setTimeout(function () 
-        {
-            pausePlayVideo(videoElem[0]);
-            clicks = 0;
-        },250); 
-    }
+	if(!onlyEnhance)
+	{
+		clicks++;
+		clearTimeout(timo);
+		if(clicks == 2)
+		{
+			clearTimeout(timo);
+			clicks = 0;
+			videoFS(videoElem[0]);
+		}
+		else
+		{
+			timo = setTimeout(function () 
+			{
+				pausePlayVideo(videoElem[0]);
+				clicks = 0;
+			},250); 
+		}
+	}
 }
 
 function pausePlayVideo(video)
@@ -558,14 +564,25 @@ $(window).keypress(function(e)
 	{
 		if (e.which == 32) 
 		{
-			pausePlayVideo(videoElem[0]);
+			if(!onlyEnhance)
+			{
+				pausePlayVideo(videoElem[0]);
+			}
 		}
         if (e.which == 102) 
 		{
 			clearTimeout(timo);
             clicks = 0;
-            videoFS(videoElem[0]);
+			if(onlyEnhance)
+			{
+				videoFS($("#mediaspace_wrapper")[0]);
+			}
+			else
+			{
+				videoFS(videoElem[0]);
+			}
 		}
         e.preventDefault();
 	}
 });
+
