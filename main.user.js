@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      2.0
+// @version      2.1
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -16,6 +16,7 @@
 // @run-at   document-start
 // @grant    GM_setValue
 // @grant    GM_getValue
+// @grant    GM_xmlhttpRequest
 // ==/UserScript==
 
 //Modify these
@@ -76,6 +77,7 @@ function modifyPlayer()
             if($("video source").attr('src').indexOf("/stream/") > -1)
             {
                 inIframe = true;
+				/* the old way
                 $.ajax({
                     url:$("video source").attr('src'),
                     complete: function(xhr) 
@@ -84,6 +86,16 @@ function modifyPlayer()
                         processVideo(data,realSrc);
                     }
                 });
+				*/
+				//needs testing:
+				GM_xmlhttpRequest({
+					url: $("video source").attr('src'),
+					method: "GET",
+					onload: function(xhr) {
+						var realSrc = xhr.getResponseHeader("x-redirect");
+                        processVideo(data,realSrc);
+					}
+				});
             }
             else
             {
@@ -109,20 +121,19 @@ function firstAuthentication(traktPIN)
         'client_secret': traktClientSecret,
         'response_type': "code"
     }
-
-
-    $.ajax({
-        url: 'https://api-v2launch.trakt.tv/oauth/token',
-        type: "POST",
-        data: JSON.stringify(postData),
-        dataType: "json",
-        contentType: "application/json; charset=utf-8",
-        complete: function(xhr)
-        {
-            if(xhr.status == 200)
+	
+	GM_xmlhttpRequest({
+		url: "https://api-v2launch.trakt.tv/oauth/token",
+		method: "POST",
+		data: JSON.stringify(postData),
+		headers: {
+			"Accept": "application/json", 
+			"Content-Type": "application/json; charset=utf-8"
+		},
+		onload: function(xhr) {
+			if(xhr.status == 200)
             {
                 var data = JSON.parse(xhr.responseText);
-                
                 GM_setValue("traktAccessToken",data.access_token)
                 GM_setValue("traktAccessTokenCreated",data.created_at)
                 GM_setValue("traktRefreshToken",data.refresh_token)
@@ -133,8 +144,8 @@ function firstAuthentication(traktPIN)
                 alert("Incorrect PIN code entered!");
                 StartFirstTimeTraktAuth()
             }
-        }
-    });
+		}
+	});
 }
 
 function StartFirstTimeTraktAuth()
@@ -174,15 +185,16 @@ function getNewAccessToken(refresh_token)
         "grant_type": "refresh_token"
     }
 
-    $.ajax({
-        url: 'https://api-v2launch.trakt.tv/oauth/token',
-        type: "POST",
-        data: JSON.stringify(postData),
-        dataType: "json",
-        contentType: "application/json; charset=utf-8",
-        complete: function(xhr)
-        {
-            if(xhr.status == 200)
+	GM_xmlhttpRequest({
+		url: "https://api-v2launch.trakt.tv/oauth/token",
+		method: "POST",
+		data: JSON.stringify(postData),
+		headers: {
+			"Accept": "application/json", 
+			"Content-Type": "application/json; charset=utf-8"
+		},
+		onload: function(xhr) {
+			if(xhr.status == 200)
             {
                 var data = JSON.parse(xhr.responseText);
                 
@@ -196,8 +208,8 @@ function getNewAccessToken(refresh_token)
             {
                 StartFirstTimeTraktAuth()
             }
-        }
-    });
+		}
+	});
 }
 
 function traktTokenRefreshed()
@@ -224,6 +236,7 @@ function setWatchedFromProvider(provider)
         for(var i = 0, len = words.length; i < len-1; i++)
         {
             searchQuery += words[i] + " "
+            //searchQuery += words[i]
         }
         searchQuery = searchQuery.slice(0, - 1);
         info = getEpisodeAndSeries(words[words.length-1])
@@ -237,84 +250,93 @@ function setWatchedFromProvider(provider)
 
 function findTVShowTrakt(name,info)
 {
-    $.ajax({
-        url:'https://api-v2launch.trakt.tv/search?query='+name,
-        contentType: "application/json; charset=utf-8",
-        headers: 
-        {
-            "trakt-api-version":"2",
+	GM_xmlhttpRequest({
+		url:'https://api-v2launch.trakt.tv/search?query='+name + '&type=show',
+		method: "GET",
+		headers: {
+			"Accept": "application/json", 
+			"Content-Type": "application/json; charset=utf-8",
+			"trakt-api-version":"2",
             "trakt-api-key":traktClientID
-        },
-        complete: function(xhr) 
-        {
-            setWatched(JSON.parse(xhr.responseText)[0],info);
-        }
-    });
+		},
+		onload: function(xhr) {
+			if(xhr.status == 200)
+            {
+                setWatched(JSON.parse(xhr.responseText)[0],info);
+            }
+		}
+	});
 }
 
 function setWatched(show,info)
 {
-    var postData = 
-    {
-        'shows': [
-            {
-                'title': show.show.title,
-                'year': show.show.year,
-                'ids': 
-                {
-                    'trakt': show.show.ids.trakt,
-                    'slug': show.show.ids.slug,
-                    'tvdb': show.show.ids.tvdb,
-                    'imdb': show.show.ids.imdb,
-                    'tmdb': show.show.ids.tmdb,
-                    'tvrage': show.show.ids.tvrage
-                },
-                'seasons': 
-                [
-                    {
-                        'number': info.series,
-                        'episodes': 
-                        [
-                            {
-                                'number': info.episode
-                            }
-                        ]
-                    }
-                ]
-            }
-        ]
-    }
-    var headers =
-    {
-        "trakt-api-version":"2",
-        "trakt-api-key":traktClientID,
-        "Authorization":'Bearer '+GM_getValue("traktAccessToken")
-    }
-    $.ajax({
-        url: 'https://api-v2launch.trakt.tv/sync/history',
-        type: "POST",
-        data: JSON.stringify(postData),
-        dataType: "json",
-        contentType: "application/json; charset=utf-8",
-        headers: headers,
-        complete: function(xhr)
-        {
-            if(xhr.status == 201)
-            {
-                console.log("Sent to trakt.tv")
-            }
-            else
-            {
-                console.log(xhr)
-            }
-        }
-    });
+	if(typeof show.show !== "undefined")
+	{
+		var postData = 
+		{
+			'shows': [
+				{
+					'title': show.show.title,
+					'year': show.show.year,
+					'ids': 
+					{
+						'trakt': show.show.ids.trakt,
+						'slug': show.show.ids.slug,
+						'tvdb': show.show.ids.tvdb,
+						'imdb': show.show.ids.imdb,
+						'tmdb': show.show.ids.tmdb,
+						'tvrage': show.show.ids.tvrage
+					},
+					'seasons': 
+					[
+						{
+							'number': info.series,
+							'episodes': 
+							[
+								{
+									'number': info.episode
+								}
+							]
+						}
+					]
+				}
+			]
+		}
+		
+		GM_xmlhttpRequest({
+			url: "https://api-v2launch.trakt.tv/sync/history",
+			method: "POST",
+			data: JSON.stringify(postData),
+			headers: {
+				"Accept": "application/json", 
+				"Content-Type": "application/json; charset=utf-8",
+				"trakt-api-version":"2",
+				"trakt-api-key":traktClientID,
+				"Authorization":'Bearer '+GM_getValue("traktAccessToken")
+			},
+			onload: function(xhr) {
+				console.log(xhr);
+				if(xhr.status == 201)
+				{
+					console.log("Sent to trakt.tv")
+				}
+				else
+				{
+					console.log(xhr)
+				}
+			}
+		});
+	}
+	else
+	{
+		console.log("Episode not found.");
+	}
 }
 
 $(function() 
 {
     parentSite = document.referrer;
-    if((typeof GM_getValue("traktAccessToken") === "undefined")&&useTrakt)
+    if((typeof GM_getValue("traktAccessToken") === "undefined") && useTrakt)
     {
         StartFirstTimeTraktAuth()
     }
@@ -324,7 +346,6 @@ $(function()
         {
             getNewAccessToken(GM_getValue("traktRefreshToken"))
         }
-        
         modifyPlayer()
     }
 });
