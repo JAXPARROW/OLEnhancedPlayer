@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      2.2
+// @version      2.3
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -21,8 +21,8 @@
 
 //Modify these
 var useTrakt = false; //Whether to use trakt.tv integration
-var traktClientID = "";
-var traktClientSecret = "";
+var traktClientID;
+var traktClientSecret;
 var playedPercentToSendToTrakt = 0.9;
 var playedSecondsToSendToTrakt = 180;
 var onlyEnhance = true;
@@ -40,6 +40,57 @@ var vidDuration = false;
 var playedSeconds = 0;
 
 var tracks = [];
+
+
+
+$(function() 
+{
+    var cancelled = false;
+    if(useTrakt)
+    {
+        traktClientID = GM_getValue("traktClientID");
+        traktClientSecret = GM_getValue("traktClientSecret");
+        if((typeof traktClientID === "undefined") && useTrakt)
+        {
+            var traktClientID = prompt("Please enter trakt.tv API client ID:", "");
+            if ((traktClientID != null) && (traktClientID != ""))
+            {
+                GM_setValue("traktClientID",traktClientID);
+            }
+            else 
+            {
+                cancelled = true;
+                alert("Track login process cancelled.\nSet useTrakt variable in source code to false to cancel permanently.");
+                traktClientID = "";
+                traktClientSecret = "";
+                Start();
+            }
+        }
+        if((typeof traktClientSecret === "undefined") && useTrakt && !cancelled)
+        {
+            var traktClientSecret = prompt("Please enter trakt.tv API client secret:", "");
+            if ((traktClientSecret != null) && (traktClientSecret != ""))
+            {
+                GM_setValue("traktClientSecret",traktClientSecret);
+            }
+            else 
+            {
+                alert("Track login process cancelled.\nSet useTrakt variable in source code to false to cancel permanently.");
+                traktClientSecret = "";
+                Start();
+            }
+        }
+        Start();
+        
+    }
+    else
+    {
+        traktClientID = "";
+        traktClientSecret = "";
+        Start();
+    }
+    
+});
 
 
 //remove all original scripts
@@ -60,6 +111,23 @@ $(document).on('mousemove', function() {
         }
     }, 3400);
 });
+
+function Start()
+{
+    parentSite = document.referrer;
+    if((typeof GM_getValue("traktAccessToken") === "undefined") && useTrakt)
+    {
+        StartFirstTimeTraktAuth()
+    }
+    else
+    {
+        if(Math.floor(Date.now() / 1000) - GM_getValue("traktAccessTokenCreated") > 5184000)
+        {
+            getNewAccessToken(GM_getValue("traktRefreshToken"))
+        }
+        modifyPlayer()
+    }
+}
 
 function popupwindow(url, title, w, h) 
 {
@@ -333,23 +401,6 @@ function setWatched(show,info)
 		console.log("Episode not found.");
 	}
 }
-
-$(function() 
-{
-    parentSite = document.referrer;
-    if((typeof GM_getValue("traktAccessToken") === "undefined") && useTrakt)
-    {
-        StartFirstTimeTraktAuth()
-    }
-    else
-    {
-        if(Math.floor(Date.now() / 1000) - GM_getValue("traktAccessTokenCreated") > 5184000)
-        {
-            getNewAccessToken(GM_getValue("traktRefreshToken"))
-        }
-        modifyPlayer()
-    }
-});
 
 function processVideo(data,realSrc)
 {
