@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         OpenLoad to HTML5
 // @namespace    https://github.com/JurajNyiri/
-// @version      2.3
+// @version      2.4
 // @description  Replaces buggy and full-of-adds openload player with a clear html5 player.
 // @author       Juraj Nyíri | jurajnyiri.eu
 // @encoding utf-8
@@ -16,19 +16,19 @@
 // @run-at   document-start
 // @grant    GM_setValue
 // @grant    GM_getValue
+// @grant    GM_deleteValue
 // @grant    GM_xmlhttpRequest
 // ==/UserScript==
 
 //Modify these
-var useTrakt = false; //Whether to use trakt.tv integration
-var traktClientID;
-var traktClientSecret;
 var playedPercentToSendToTrakt = 0.9;
 var playedSecondsToSendToTrakt = 180;
 var onlyEnhance = true;
 //Do not change anything under this.
 
-
+var useTrakt;
+var traktClientID;
+var traktClientSecret;
 var videoElem = false;
 var clicks = 0;
 var timo;
@@ -41,41 +41,58 @@ var playedSeconds = 0;
 
 var tracks = [];
 
-
+function setUpTraktUsage()
+{
+    useTrakt = prompt("Do you wish to use Trakt integration on supported websites? (Y/N)", "");
+    if ((useTrakt != null) && (traktClientID != "") && (useTrakt == "Y" || useTrakt == "N"))
+    {
+        GM_setValue("useTrakt",useTrakt);
+    }
+    else 
+    {
+        setUpTraktUsage();
+    }
+}
 
 $(function() 
 {
     var cancelled = false;
-    if(useTrakt)
+    useTrakt = GM_getValue("useTrakt");
+    if(typeof useTrakt === "undefined")
+    {
+        setUpTraktUsage();
+    }
+    if(useTrakt == "Y")
     {
         traktClientID = GM_getValue("traktClientID");
         traktClientSecret = GM_getValue("traktClientSecret");
-        if((typeof traktClientID === "undefined") && useTrakt)
+        if(typeof traktClientID === "undefined")
         {
-            var traktClientID = prompt("Please enter trakt.tv API client ID:", "");
+            traktClientID = prompt("Please enter trakt.tv API client ID:", "");
             if ((traktClientID != null) && (traktClientID != ""))
             {
                 GM_setValue("traktClientID",traktClientID);
             }
             else 
             {
+                GM_deleteValue("useTrakt");
                 cancelled = true;
-                alert("Track login process cancelled.\nSet useTrakt variable in source code to false to cancel permanently.");
                 traktClientID = "";
                 traktClientSecret = "";
                 Start();
             }
         }
-        if((typeof traktClientSecret === "undefined") && useTrakt && !cancelled)
+        if((typeof traktClientSecret === "undefined") && !cancelled)
         {
-            var traktClientSecret = prompt("Please enter trakt.tv API client secret:", "");
+            traktClientSecret = prompt("Please enter trakt.tv API client secret:", "");
             if ((traktClientSecret != null) && (traktClientSecret != ""))
             {
                 GM_setValue("traktClientSecret",traktClientSecret);
             }
             else 
             {
-                alert("Track login process cancelled.\nSet useTrakt variable in source code to false to cancel permanently.");
+                GM_deleteValue("useTrakt");
+                cancelled = true;
                 traktClientSecret = "";
                 Start();
             }
@@ -115,7 +132,7 @@ $(document).on('mousemove', function() {
 function Start()
 {
     parentSite = document.referrer;
-    if((typeof GM_getValue("traktAccessToken") === "undefined") && useTrakt)
+    if((typeof GM_getValue("traktAccessToken") === "undefined") && useTrakt == "Y")
     {
         StartFirstTimeTraktAuth()
     }
@@ -235,7 +252,6 @@ function StartFirstTimeTraktAuth()
                 }
                 else 
                 {
-                    alert("Track login process cancelled.\nSet useTrakt variable in source code to false to cancel permanently.");
                     modifyPlayer()
                 }
             }
